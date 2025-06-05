@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema IA - Apostas Esportivas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --light-bg: #f8f9fa;
+            --dark-bg: #343a40;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--light-bg);
+            color: var(--primary-color);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: white !important;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            font-weight: 600;
+        }
+        
+        .btn-primary {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+            border-color: #2980b9;
+        }
+        
+        .btn-danger {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+            border-color: #c0392b;
+        }
+        
+        .fixture-card {
+            cursor: pointer;
+        }
+        
+        .fixture-card.selected {
+            border: 2px solid var(--accent-color);
+        }
+        
+        .team-logo {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+        }
+        
+        .confidence-high {
+            color: #27ae60;
+        }
+        
+        .confidence-medium {
+            color: #f39c12;
+        }
+        
+        .confidence-low {
+            color: #e74c3c;
+        }
+        
+        .value-bet-badge {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .card-title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="fas fa-robot me-2"></i>Sistema IA - Apostas Esportivas</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Início</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/select-league"><i class="fas fa-futbol me-1"></i> Competições</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/analysis"><i class="fas fa-chart-line me-1"></i> Análises</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="content">
+            <!-- O conteúdo será carregado dinamicamente aqui -->
+        </div>
+    </div>
+
+    <footer class="bg-dark text-white text-center py-3 mt-5">
+        <div class="container">
+            <p class="mb-0">&copy; 2025 Sistema IA - Apostas Esportivas</p>
+            <small class="text-muted">Este sistema é apenas para fins educacionais. Aposte com responsabilidade.</small>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Carregar conteúdo da página inicial
+        $(document).ready(function() {
+            loadHomePage();
+            
+            // Manipular navegação
+            $(document).on('click', '.nav-link', function(e) {
+                e.preventDefault();
+                const href = $(this).attr('href');
+                
+                if (href === '/') {
+                    loadHomePage();
+                } else if (href === '/select-league') {
+                    loadLeaguesPage();
+                } else if (href === '/analysis') {
+                    loadAnalysisPage();
+                } else if (href.startsWith('/fixtures/')) {
+                    const leagueId = href.split('/').pop();
+                    loadFixturesPage(leagueId);
+                }
+            });
+            
+            // Manipular seleção de jogos
+            $(document).on('click', '.fixture-card', function() {
+                $(this).toggleClass('selected');
+                updateSelectedCount();
+            });
+            
+            // Manipular botão de análise
+            $(document).on('click', '#analyze-button', function() {
+                const selectedFixtures = $('.fixture-card.selected').map(function() {
+                    return $(this).data('fixture-id');
+                }).get();
+                
+                if (selectedFixtures.length === 0) {
+                    alert('Selecione pelo menos um jogo para analisar.');
+                    return;
+                }
+                
+                analyzeFixtures(selectedFixtures);
+            });
+        });
+        
+        function loadHomePage() {
+            const content = `
+                <div class="row">
+                    <div class="col-md-12 text-center mb-4">
+                        <h1><i class="fas fa-robot me-2"></i>Sistema de IA para Análise de Apostas Esportivas</h1>
+                        <p class="lead">Utilize inteligência artificial para analisar jogos e identificar oportunidades de apostas.</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <i class="fas fa-futbol me-2"></i>Selecione Competições
+                            </div>
+                            <div class="card-body">
+                                <p>Escolha entre as principais ligas, seleções e eliminatórias disponíveis.</p>
+                                <a href="/select-league" class="btn btn-primary">Ver Competições</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <i class="fas fa-calendar-alt me-2"></i>Selecione Jogos
+                            </div>
+                            <div class="card-body">
+                                <p>Escolha manualmente os jogos que deseja analisar com nossa IA.</p>
+                                <a href="/select-league" class="btn btn-primary">Selecionar Jogos</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <i class="fas fa-chart-line me-2"></i>Obtenha Análises
+                            </div>
+                            <div class="card-body">
+                                <p>Receba palpites com score de confiança e identificação de value bets.</p>
+                                <a href="/analysis" class="btn btn-primary">Ver Análises</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-info-circle me-2"></i>Sobre o Sistema
+                            </div>
+                            <div class="card-body">
+                                <p>Este sistema utiliza inteligência artificial para analisar dados históricos e estatísticas de jogos de futebol, gerando palpites com score de confiança.</p>
+                                <p>Características principais:</p>
+                                <ul>
+                                    <li>Análise de dados históricos e estatísticas</li>
+                                    <li>Detecção de padrões e value bets</li>
+                                    <li>Geração de tips com score de confiança</li>
+                                    <li>Foco nas principais ligas, seleções e eliminatórias</li>
+                                </ul>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>Aviso: Este sistema é apenas para fins educacionais. Aposte com responsabilidade.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#content').html(content);
+        }
+        
+        function loadLeaguesPage() {
+            // Em um cenário real, isso seria carregado da API
+            const mockLeagues = [
+                { id: 1, name: 'Premier League', country: 'Inglaterra', logo: 'https://media.api-sports.io/football/leagues/39.png' },
+                { id: 2, name: 'La Liga', country: 'Espanha', logo: 'https://media.api-sports.io/football/leagues/140.png' },
+                { id: 3, name: 'Serie A', country: 'Itália', logo: 'https://media.api-sports.io/football/leagues/135.png' },
+                { id: 4, name: 'Bundesliga', country: 'Alemanha', logo: 'https://media.api-sports.io/football/leagues/78.png' },
+                { id: 5, name: 'Ligue 1', country: 'França', logo: 'https://media.api-sports.io/football/leagues/61.png' },
+                { id: 6, name: 'Brasileirão Série A', country: 'Brasil', logo: 'https://media.api-sports.io/football/leagues/71.png' },
+                { id: 7, name: 'Copa do Mundo', country: 'Mundial', logo: 'https://media.api-sports.io/football/leagues/1.png' },
+                { id: 8, name: 'Eliminatórias Copa do Mundo', country: 'Mundial', logo: 'https://media.api-sports.io/football/leagues/32.png' }
+            ];
+            
+            let content = `
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <h2><i class="fas fa-trophy me-2"></i>Selecione uma Competição</h2>
+                        <p>Escolha uma competição para ver os jogos disponíveis.</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+            `;
+            
+            mockLeagues.forEach(league => {
+                content += `
+                    <div class="col-md-3 col-sm-6 mb-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <img src="${league.logo}" alt="${league.name}" class="img-fluid mb-3" style="max-height: 80px;">
+                                <h5 class="card-title">${league.name}</h5>
+                                <p class="card-text text-muted">${league.country}</p>
+                                <a href="/fixtures/${league.id}" class="btn btn-primary">Ver Jogos</a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            content += `</div>`;
+            
+            $('#content').html(content);
+        }
+        
+        function loadFixturesPage(leagueId) {
+            // Em um cenário real, isso seria carregado da API
+            const mockLeague = {
+                id: leagueId,
+                name: 'Premier League',
+                country: 'Inglaterra',
+                logo: 'https://media.api-sports.io/football/leagues/39.png'
+            };
+            
+            const mockFixtures = [
+                { id: 101, home: 'Manchester City', away: 'Liverpool', date: '2025-06-10 16:00', homeTeamLogo: 'https://media.api-sports.io/football/teams/50.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/40.png' },
+                { id: 102, home: 'Chelsea', away: 'Arsenal', date: '2025-06-10 18:30', homeTeamLogo: 'https://media.api-sports.io/football/teams/49.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/42.png' },
+                { id: 103, home: 'Manchester United', away: 'Tottenham', date: '2025-06-11 16:00', homeTeamLogo: 'https://media.api-sports.io/football/teams/33.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/47.png' },
+                { id: 104, home: 'Newcastle', away: 'Aston Villa', date: '2025-06-11 18:30', homeTeamLogo: 'https://media.api-sports.io/football/teams/34.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/66.png' },
+                { id: 105, home: 'Brighton', away: 'West Ham', date: '2025-06-12 16:00', homeTeamLogo: 'https://media.api-sports.io/football/teams/51.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/48.png' },
+                { id: 106, home: 'Crystal Palace', away: 'Everton', date: '2025-06-12 18:30', homeTeamLogo: 'https://media.api-sports.io/football/teams/52.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/45.png' }
+            ];
+            
+            let content = `
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <div class="d-flex align-items-center">
+                            <img src="${mockLeague.logo}" alt="${mockLeague.name}" class="me-3" style="height: 50px;">
+                            <div>
+                                <h2>${mockLeague.name}</h2>
+                                <p class="text-muted mb-0">${mockLeague.country}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span><i class="fas fa-calendar-alt me-2"></i>Jogos Disponíveis</span>
+                                    <span id="selected-count" class="badge bg-primary">0 selecionados</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <p>Selecione os jogos que deseja analisar (clique nos cards para selecionar):</p>
+                                
+                                <div class="row">
+            `;
+            
+            mockFixtures.forEach(fixture => {
+                const fixtureDate = new Date(fixture.date);
+                const formattedDate = fixtureDate.toLocaleDateString('pt-BR');
+                const formattedTime = fixtureDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                
+                content += `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card fixture-card" data-fixture-id="${fixture.id}">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <small class="text-muted">${formattedDate} - ${formattedTime}</small>
+                                    <div class="form-check">
+                                        <input class="form-check-input fixture-checkbox" type="checkbox" value="">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="${fixture.homeTeamLogo}" alt="${fixture.home}" class="team-logo me-2">
+                                        <span>${fixture.home}</span>
+                                    </div>
+                                    <span class="badge bg-secondary">vs</span>
+                                    <div class="d-flex align-items-center">
+                                        <span>${fixture.away}</span>
+                                        <img src="${fixture.awayTeamLogo}" alt="${fixture.away}" class="team-logo ms-2">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            content += `
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <button id="analyze-button" class="btn btn-primary"><i class="fas fa-chart-line me-2"></i>Analisar Jogos Selecionados</button>
+                                <a href="/select-league" class="btn btn-outline-secondary ms-2"><i class="fas fa-arrow-left me-2"></i>Voltar para Competições</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            $('#content').html(content);
+        }
+        
+        function loadAnalysisPage() {
+            // Em um cenário real, isso seria carregado da API
+            const mockAnalysis = [
+                {
+                    fixture: { id: 101, home: 'Manchester City', away: 'Liverpool', date: '2025-06-10 16:00', homeTeamLogo: 'https://media.api-sports.io/football/teams/50.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/40.png' },
+                    predictions: {
+                        '1X2': { Home: 0.45, Draw: 0.25, Away: 0.30 },
+                        'BTTS': { Yes: 0.75, No: 0.25 },
+                        'Over/Under 2.5': { Over: 0.65, Under: 0.35 }
+                    },
+                    valueBets: [
+                        { market: 'BTTS', selection: 'Yes', marketOdds: 2.1, value: 15.5 }
+                    ]
+                },
+                {
+                    fixture: { id: 103, home: 'Manchester United', away: 'Tottenham', date: '2025-06-11 16:00', homeTeamLogo: 'https://media.api-sports.io/football/teams/33.png', awayTeamLogo: 'https://media.api-sports.io/football/teams/47.png' },
+                    predictions: {
+                        '1X2': { Home: 0.40, Draw: 0.30, Away: 0.30 },
+                        'BTTS': { Yes: 0.70, No: 0.30 },
+                        'Over/Under 2.5': { Over: 0.60, Under: 0.40 }
+                    },
+                    valueBets: [
+                        { market: 'Over/Under 2.5', selection: 'Over', marketOdds: 2.0, value: 12.0 }
+                    ]
+                }
+            ];
+            
+            let content = `
+                <div class="row">
+                    <div class="col-md-12 mb-4">
+                        <h2><i class="fas fa-chart-line me-2"></i>Análises e Palpites</h2>
+                        <p>Resultados da análise de IA para os jogos selecionados.</p>
+                    </div>
+                </div>
+            `;
+            
+            if (mockAnalysis.length === 0) {
+                content += `
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>Nenhuma análise disponível. Selecione jogos para analisar.
+                    </div>
+                    <a href="/select-league" class="btn btn-primary"><i class="fas fa-futbol me-2"></i>Selecionar Jogos</a>
+                `;
+            } else {
+                mockAnalysis.forEach(analysis => {
+                    const fixtureDate = new Date(analysis.fixture.date);
+                    const formattedDate = fixtureDate.toLocaleDateString('pt-BR');
+                    const formattedTime = fixtureDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    
+                    content += `
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>
+                                        <img src="${analysis.fixture.homeTeamLogo}" alt="${analysis.fixture.home}" class="team-logo me-2">
+                                        ${analysis.fixture.home} vs ${analysis.fixture.away}
+                                        <img src="${analysis.fixture.awayTeamLogo}" alt="${analysis.fixture.away}" class="team-logo ms-2">
+                                    </span>
+                                    <small class="text-muted">${formattedDate} - ${formattedTime}</small>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <h5>Resultado (1X2)</h5>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-success" style="width: ${analysis.predictions['1X2'].Home * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>${analysis.fixture.home}</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['1X2'].Home)}">${(analysis.predictions['1X2'].Home * 100).toFixed(1)}%</span>
+                                        </div>
+                                        
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-secondary" style="width: ${analysis.predictions['1X2'].Draw * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>Empate</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['1X2'].Draw)}">${(analysis.predictions['1X2'].Draw * 100).toFixed(1)}%</span>
+                                        </div>
+                                        
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-primary" style="width: ${analysis.predictions['1X2'].Away * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>${analysis.fixture.away}</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['1X2'].Away)}">${(analysis.predictions['1X2'].Away * 100).toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <h5>Ambas Marcam (BTTS)</h5>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-success" style="width: ${analysis.predictions['BTTS'].Yes * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>Sim</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['BTTS'].Yes)}">${(analysis.predictions['BTTS'].Yes * 100).toFixed(1)}%</span>
+                                        </div>
+                                        
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-danger" style="width: ${analysis.predictions['BTTS'].No * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>Não</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['BTTS'].No)}">${(analysis.predictions['BTTS'].No * 100).toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-4">
+                                        <h5>Over/Under 2.5 Gols</h5>
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-success" style="width: ${analysis.predictions['Over/Under 2.5'].Over * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>Over 2.5</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['Over/Under 2.5'].Over)}">${(analysis.predictions['Over/Under 2.5'].Over * 100).toFixed(1)}%</span>
+                                        </div>
+                                        
+                                        <div class="progress mb-2">
+                                            <div class="progress-bar bg-danger" style="width: ${analysis.predictions['Over/Under 2.5'].Under * 100}%"></div>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>Under 2.5</span>
+                                            <span class="${getConfidenceClass(analysis.predictions['Over/Under 2.5'].Under)}">${(analysis.predictions['Over/Under 2.5'].Under * 100).toFixed(1)}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h5>Value Bets Detectadas</h5>
+                                    ${analysis.valueBets.length > 0 ? 
+                                        `<div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Mercado</th>
+                                                        <th>Seleção</th>
+                                                        <th>Odds</th>
+                                                        <th>Valor (%)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    ${analysis.valueBets.map(vb => `
+                                                        <tr>
+                                                            <td>${vb.market}</td>
+                                                            <td><span class="value-bet-badge">${vb.selection}</span></td>
+                                                            <td>${vb.marketOdds.toFixed(2)}</td>
+                                                            <td>+${vb.value.toFixed(1)}%</td>
+                                                        </tr>
+                                                    `).join('')}
+                                                </tbody>
+                                            </table>
+                                        </div>` : 
+                                        `<p class="text-muted">Nenhuma value bet detectada para este jogo.</p>`
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                content += `
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Aviso: Estas análises são baseadas em dados históricos e estatísticas. Aposte com responsabilidade.
+                    </div>
+                    <a href="/select-league" class="btn btn-primary"><i class="fas fa-futbol me-2"></i>Analisar Mais Jogos</a>
+                `;
+            }
+            
+            $('#content').html(content);
+        }
+        
+        function updateSelectedCount() {
+            const count = $('.fixture-card.selected').length;
+            $('#selected-count').text(`${count} selecionados`);
+        }
+        
+        function analyzeFixtures(fixtureIds) {
+            // Em um cenário real, isso enviaria uma requisição para a API
+            alert(`Analisando ${fixtureIds.length} jogos...`);
+            
+            // Simular processamento
+            setTimeout(() => {
+                loadAnalysisPage();
+            }, 1500);
+        }
+        
+        function getConfidenceClass(confidence) {
+            if (confidence >= 0.65) return 'confidence-high';
+            if (confidence >= 0.45) return 'confidence-medium';
+            return 'confidence-low';
+        }
+    </script>
+</body>
+</html>
